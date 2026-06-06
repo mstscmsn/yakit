@@ -1,6 +1,12 @@
 # Yakit 使用指南（中文）
 
-> 一份面向初学者、简单易懂的 Yakit 上手教程。内容整理自 [Yakit 官方文档](https://yaklang.com/) 与 [GitHub 官方仓库](https://github.com/yaklang/yakit)，并配有在本环境中实际运行 Yakit 引擎的测试截图。
+> 一份面向初学者、简单易懂的 Yakit 上手教程。内容整理自 [Yakit 官方文档](https://yaklang.com/) 与 [GitHub 官方仓库](https://github.com/yaklang/yakit)。
+>
+> 📸 **全程实测**：本指南把 Yakit 真正跑了起来，**28 张截图全部来自真实运行**（MITM 抓包/拦截、Web Fuzzer 发包与模糊测试、专项漏洞检测、DNSLog，以及 Yak Runner 中逐例执行的 11 段 Yaklang 代码），并非示意图。运行方法见 [§13](#13-运行与验证说明如何在离线环境跑起来)。
+>
+> 👤 **适合谁看**：刚接触 Yakit / 想从 BurpSuite 迁移 / 想学 Yaklang 脚本编程的安全初学者。
+>
+> ⚠️ **务必合法合规使用**，详见文末 [法律与合规声明](#14-法律与合规声明)。
 
 ---
 
@@ -31,7 +37,7 @@
     - [10.12 Yaklang 语法速查表](#1012-yaklang-语法速查表)
 11. [反连服务器（Reverse Server）](#11-反连服务器reverse-server)
 12. [常见问题 FAQ](#12-常见问题-faq)
-13. [测试截图：在本环境运行 Yakit](#13-测试截图在本环境运行-yakit)
+13. [运行与验证说明（如何在离线环境跑起来）](#13-运行与验证说明如何在离线环境跑起来)
 14. [法律与合规声明](#14-法律与合规声明)
 15. [参考链接](#15-参考链接)
 
@@ -119,6 +125,14 @@ Yakit 是**开源免费**的（GitHub 仓库 [yaklang/yakit](https://github.com/
    - 也可以选择 **「远程连接」**，填写远程引擎的 `Host / Port / 证书 / 密钥` 来连接部署在服务器上的引擎。
 4. **进入主界面**：连接成功后即可看到顶部菜单栏（安全工具、MITM、Web Fuzzer、插件、Yak Runner 等）。
 
+首次启动的**主题/模式选择与连接引擎**界面如下，点击橙色 **「手动连接引擎」**（或等待自动连接）即可：
+
+![Yakit 启动与连接引擎界面](docs/images/01-welcome.png)
+
+连接成功后进入**项目管理**：每个"项目"对应一个独立数据库（SQLite），流量与扫描结果隔离存储。标题栏显示 `Yakit-本地模式`，已连接本地引擎：
+
+![Yakit 项目管理界面](docs/images/02-project-management.png)
+
 > 🛠️ **手动启动引擎（进阶 / 离线环境）**
 > 如果你已经单独下载了 `yak` 引擎二进制，可以手动启动 gRPC 服务，再让 Yakit「远程连接 / 本地连接」到它：
 > ```bash
@@ -147,6 +161,10 @@ Yakit 是**开源免费**的（GitHub 仓库 [yaklang/yakit](https://github.com/
 | **Yak Runner** | 编写运行 Yaklang 脚本 | — |
 | **Payload 字典** | 管理爆破字典 | Payloads |
 
+进入项目后的**主界面（首页 Dashboard）**——顶部是功能菜单，中间是各模块入口卡片，右下角可见 **本地插件 37 个**（说明引擎已离线就绪）：
+
+![Yakit 主界面首页](docs/images/03-dashboard.png)
+
 ---
 
 ## 6. 实战一：MITM 劫持（替代 BurpSuite）
@@ -158,6 +176,14 @@ MITM（中间人）是 Yakit 最常用的功能：它在本地启动一个 HTTP 
 1. 顶部菜单进入 **「MITM 交互式劫持」**。
 2. 设置 **劫持代理监听地址**，默认 `127.0.0.1:8083`（端口可改）。
 3. 点击 **「劫持已开启 / 启动」**。
+
+MITM 配置页如下：右侧设置监听主机/端口、下游代理、HTTPS 配置等；左侧可勾选**被动扫描插件**（SQL 注入、XSS、命令注入、文件包含等，共 17 个）。底部点 **「劫持启动」**，或 **「免配置启动」** 一键拉起带好代理与证书的 Chrome：
+
+![Yakit MITM 配置页](docs/images/mitm-01-config.png)
+
+启动后进入劫持运行界面，标题显示 `劫持 HTTP Request 127.0.0.1:8083`，可在 **手动劫持 / 自动放行** 之间切换：
+
+![Yakit MITM 运行界面](docs/images/mitm-02-running.png)
 
 ### 6.2 安装 CA 证书（解密 HTTPS）
 
@@ -177,6 +203,18 @@ MITM（中间人）是 Yakit 最常用的功能：它在本地启动一个 HTTP 
   - **丢弃（Drop）**：丢掉这个包。
   - **放行所有 / 自动放行**：暂停手动拦截，让流量自动通过（这时相当于被动记录模式）。
 - **History（历史记录）**：所有经过代理的请求都会记录在下方列表，支持按 URL、状态码、关键字过滤检索，点开可看完整请求/响应。
+
+**实测演示：** 在「自动放行」模式下让流量经过代理（这里用 `curl -x http://127.0.0.1:8083 ...` 访问本地靶子），所有请求都被记录下来，含方法、状态码、URL、Host、Path：
+
+![Yakit MITM 抓取的流量列表](docs/images/mitm-03-traffic.png)
+
+切换到 **「手动劫持」** 后，再来一个请求就会被**挂起拦截**，下方可直接编辑这个原始报文（图中拦下的是带自定义 `X-Demo` 头的 `GET /admin?id=1&user=test`），然后选择 **放行 / 丢弃 / 劫持响应 / 发到 FUZZ**：
+
+![Yakit MITM 手动拦截请求](docs/images/mitm-04-intercept.png)
+
+所有经过代理的流量都会进入 **History**，左侧按站点分组，支持状态码/关键字/高级筛选：
+
+![Yakit MITM History 历史记录](docs/images/mitm-05-history.png)
 
 ### 6.4 三个高频进阶能力
 
@@ -199,6 +237,14 @@ Web Fuzzer 是 Yakit 的"杀手锏"，把 BurpSuite 的 Repeater（重放）和 
 1. 进入 **「Web Fuzzer」**，左侧粘贴/编辑一个**原始 HTTP 请求**（Raw 报文）。
 2. 点击 **「发送」**，右侧立刻显示响应。
 3. 引擎会**自动修复** `Content-Length`、`Content-Type`、`CRLF`、分块编码等细节，你专注改 payload 即可。
+
+Web Fuzzer 的界面：左侧编辑请求，右侧显示响应，顶部有 `强制 HTTPS`、`热加载`、`构造请求`、`爆破示例` 等：
+
+![Yakit Web Fuzzer 编辑界面](docs/images/05-webfuzzer.png)
+
+**实测单次发包**：把请求指向本地靶子并点「发送」，右侧真实返回 `HTTP/1.0 200 OK` 与响应体，并显示耗时（5ms）与远端地址：
+
+![Yakit Web Fuzzer 真实发包并收到 200 响应](docs/images/06-webfuzzer-live-test.png)
 
 ### 7.2 Fuzztag：可视化模糊测试的核心语法
 
@@ -234,6 +280,10 @@ Fuzztag 用 `{{...}}` 包裹，发送时会被**自动展开**成多个请求。
 
 发送后下方是结果表格，可按 **响应状态码、响应长度、耗时、关键字匹配** 排序和过滤，快速定位"与众不同"的响应——这通常就是漏洞点或正确凭据。
 
+**实测模糊测试**：把路径写成 `GET /page{{int(1-5)}}`（Yakit 会高亮识别 fuzztag），点「发送请求」后自动展开成 5 个请求并发出，结果表里每行对应一个 payload，可见 **状态码 / 响应大小 / 延迟(ms) / Payloads** 等列，点列头即可排序找异常项（这就是 BurpSuite Intruder 的可视化版）：
+
+![Yakit Web Fuzzer 模糊测试结果表](docs/images/webfuzzer-fuzz-table.png)
+
 ---
 
 ## 8. 实战三：插件商店与插件使用
@@ -248,7 +298,13 @@ Yakit 的能力很大一部分来自插件（用 Yaklang 编写）。
    - **PoC/漏洞插件**：针对特定漏洞做检测/利用。
 4. 也可以点 **「新建插件」** 自己写一个，支持热加载调试。
 
-> ⚠️ 在受限网络环境（无法访问插件源）下，插件商店列表可能为空或无法下载，但**本地内置功能（MITM、Web Fuzzer、Yak Runner）不受影响**。
+引擎自带了一批**本地插件**（开箱即用、离线可用）。在 **「插件 → 批量执行」** 里可以勾选这些本地插件、填入扫描目标后批量执行：
+
+![Yakit 本地插件批量执行](docs/images/plugin-local-batch.png)
+
+> ⚠️ 在受限网络环境（无法访问插件源）下，**在线插件商店**会提示 `Host not in allowlist / 连网后才可访问 Yakit 插件商店`（如下图），但**本地内置插件与功能（MITM、Web Fuzzer、Yak Runner、本地 PoC）完全不受影响**。本指南正是在这种离线环境下完成全部实测的。
+
+![Yakit 在线插件商店在离线环境下不可用](docs/images/plugin-store-offline.png)
 
 ---
 
@@ -260,6 +316,10 @@ Yakit 的「专项漏洞检测」针对常见目标做精准 PoC 扫描：
 2. 输入目标（URL / IP / 资产列表）。
 3. 选择要使用的 PoC 类型（按中间件、CMS、框架、组件筛选，例如 Shiro、Struts2、Weblogic、Log4j 等）。
 4. 点击开始，结果会列出命中的漏洞与详情，可导出报告。
+
+「安全工具 → 专项漏洞检测」页面如下：左侧按 **类别**（Java、SQL 注入、远程代码执行、Shiro、FastJSON、Spring、IIS、XSS、PHP、安全产品…）列出 PoC 插件组，右侧填入扫描目标即可批量检测：
+
+![Yakit 专项漏洞检测](docs/images/vuln-scan.png)
 
 > 也可结合「端口/资产扫描」先做资产测绘（端口、服务指纹、Web 指纹），再针对性地选 PoC 扫描。
 
@@ -608,6 +668,12 @@ yakit.Warn("任务结束（这是一条告警示例）")
 
 使用时在「反连服务器」配置监听公网地址/端口，把生成的回连地址放进你的 payload，触发后即可在面板看到回连记录。
 
+「反连」菜单下提供 **反连触发器（DNS/ICMP/TCP）、RevHack(Yso)、端口监听器** 等。下图是 **DNSLog** 页面：点「生成一个可用域名」拿到临时域名，目标一旦解析/访问该域名，下方表格就会出现 **域名 / 类型 / 远端 IP / Timestamp** 记录（适合验证 SSRF、盲注等带外漏洞）：
+
+![Yakit DNSLog 反连服务](docs/images/reverse-dnslog.png)
+
+> ⚠️ 内置 DNSLog 依赖外部服务，在仅放行 GitHub 的离线环境中无法生成域名，但页面与配置流程如上所示。
+
 ---
 
 ## 12. 常见问题 FAQ
@@ -629,62 +695,35 @@ A：建议使用 Yakit 自动匹配的引擎版本。版本差异较大时部分
 
 ---
 
-## 13. 测试截图：在本环境运行 Yakit
+## 13. 运行与验证说明（如何在离线环境跑起来）
 
-> **运行说明（如实记录）**：本指南是在一个**网络受限的 Linux 沙箱环境**中编写并实测的。该环境只放行了 GitHub，**屏蔽了 yaklang.com 及其阿里云 OSS 下载源**，因此 Yakit 自带的"在线安装引擎 / 插件商店在线下载"无法使用。为了真正把 Yakit 跑起来，我采用了官方支持的**离线/手动连接引擎**方案：
->
-> 1. 从 GitHub Releases 下载 Yakit GUI（`Yakit-1.4.7-0605-linux-amd64.AppImage`）与匹配的 yak 引擎（`yak_linux_amd64`，v1.4.7-beta8）。
-> 2. 把引擎二进制放到 Yakit 默认查找路径 `~/yakit-projects/yak-engine/yak`。
-> 3. 在无显示器的服务器上用 **Xvfb 虚拟显示** 启动 Yakit Electron 客户端，并用 `scrot` 截图。
-> 4. Yakit 启动后通过本地引擎自动连接（`本地模式`，`127.0.0.1:9011`），引擎内置的 **37 个核心插件全部离线加载成功**。
->
-> 下面是**实际运行截图**（非示意图）。
+> 本节如实记录本指南的**实测方法**——前面各章节的截图全部来自这次真实运行，而非示意图。
 
-### ① 启动 / 连接引擎界面
+### 13.1 环境与离线方案
 
-首次启动 Yakit，可选择主题（亮色/暗色）与运行模式（经典 / 安全专家 / 扫描模式），点击 **「手动连接引擎」** 连接本地 yak 引擎。
+本指南是在一个**网络受限的 Linux 沙箱环境**中编写并实测的。该环境只放行了 GitHub，**屏蔽了 yaklang.com 及其阿里云 OSS 下载源**，因此 Yakit 自带的"在线安装引擎 / 在线插件商店"无法使用。为了真正把 Yakit 跑起来，采用了官方支持的**离线 / 手动连接引擎**方案：
 
-![Yakit 启动与连接引擎界面](docs/images/01-welcome.png)
+1. 从 **GitHub Releases** 下载 Yakit GUI（`Yakit-1.4.7-0605-linux-amd64.AppImage`）与匹配的 yak 引擎（`yak_linux_amd64`，`v1.4.7-beta8`）。
+2. 把引擎二进制放到 Yakit 默认查找路径 `~/yakit-projects/yak-engine/yak` 并赋可执行权限。
+3. 在无显示器的服务器上用 **Xvfb 虚拟显示** 启动 Yakit Electron 客户端（`--no-sandbox`），用 `scrot` 截图、`xdotool` 模拟操作、`xclip` 粘贴代码。
+4. Yakit 启动后通过本地引擎自动连接（`本地模式`，`127.0.0.1:9011`），引擎内置的 **37 个核心插件全部离线加载成功**。
+5. 起一个本地靶子 `python3 -m http.server 9999` 作为发包/扫描/爬虫的合法测试目标。
 
-### ② 项目管理
+### 13.2 实测验证清单
 
-连接成功后进入**项目管理**。每个"项目"对应一个独立数据库（SQLite），可新建项目、临时项目或导入已有项目，流量与扫描结果都隔离存储。标题栏显示 `Yakit-本地模式`，已连接 `127.0.0.1:9011`。
+| 功能 | 验证结果 | 对应截图所在章节 |
+| --- | --- | --- |
+| 引擎连接 / 项目管理 | ✅ 本地模式连接成功 | [§4](#4-首次启动与连接引擎) |
+| 主界面 / 本地插件加载 | ✅ 37 个本地插件就绪 | [§5](#5-核心功能速览) |
+| MITM 配置 / 启动 / 抓包 | ✅ 经代理抓到 6 条流量 | [§6](#6-实战一mitm-劫持替代-burpsuite) |
+| MITM 手动拦截 / 改包 / 放行 | ✅ 拦下并放行真实请求 | [§6.3](#63-拦截--放行--历史) |
+| Web Fuzzer 单次发包 | ✅ 真实 `200 OK` 响应 | [§7.1](#71-基本用法重放) |
+| Web Fuzzer 模糊测试 | ✅ fuzztag 展开发出 5 个请求 | [§7.3](#73-结果分析) |
+| 本地插件 / 专项漏洞检测 | ✅ 离线插件可用 | [§8](#8-实战三插件商店与插件使用) · [§9](#9-实战四专项漏洞扫描) |
+| Yak Runner / Yaklang 11 个示例 | ✅ 全部成功运行并截图 | [§10](#10-实战五yak-runner-与-yaklang-语法详解含逐例截图) |
+| 在线插件商店 / DNSLog 域名生成 | ⚠️ 受网络策略限制不可用 | [§8](#8-实战三插件商店与插件使用) · [§11](#11-反连服务器reverse-server) |
 
-![Yakit 项目管理界面](docs/images/02-project-management.png)
-
-### ③ 主界面（首页 Dashboard）
-
-进入项目后即是主工作台：顶部是功能菜单（安全工具 / 插件 / 反连 / 数据库 / 字典管理 / Codec / Yak Runner / 靶场 / 记事本），中间是 **MITM 交互式劫持**、**WebFuzzer**、**工具箱**（Yak Runner、靶场 Vulinbox、CVE 管理…）等入口。右下角显示 **本地插件 37** 个，证明引擎已离线就绪。
-
-![Yakit 主界面首页](docs/images/03-dashboard.png)
-
-### ④ MITM 交互式劫持配置
-
-MITM 页面左侧是**被动扫描插件列表**（SQL 注入、命令注入、XSS 检测、文件包含、开放重定向、Swagger 泄漏等，共 17 个），右侧可配置**劫持代理监听主机/端口**（默认 `127.0.0.1:8083`）、下游代理、HTTP/2.0、HTTPS 配置等。
-
-![Yakit MITM 劫持配置](docs/images/04-mitm-config.png)
-
-### ⑤ Web Fuzzer 编辑器
-
-Web Fuzzer 左侧编辑**原始 HTTP 请求**，右侧展示响应。支持 `强制 HTTPS`、`热加载`、`构造请求`、`爆破示例`、`Fuzztag` 等能力。
-
-![Yakit Web Fuzzer 编辑界面](docs/images/05-webfuzzer.png)
-
-### ⑥ Web Fuzzer 实战发包（真实测试）✅
-
-为了验证端到端链路真的能工作，我在本机起了一个测试 HTTP 服务（`python3 -m http.server 9999`），在 Web Fuzzer 里编辑请求并点击 **「发送请求」**：
-
-```http
-GET / HTTP/1.1
-Host: 127.0.0.1:9999
-User-Agent: Yakit-Guide-Test
-```
-
-Yakit 成功发包并在右侧渲染了**真实响应**：`HTTP/1.0 200 OK`、`Server: SimpleHTTP/0.6`、`Content-Length: 39`、响应体 `<h1>Yakit Web Fuzzer live test OK</h1>`，耗时 **5ms**、远端地址 `127.0.0.1:9999`。本机测试服务的访问日志中也同步出现了这条 `"GET / HTTP/1.1" 200` 记录——**确认 Yakit GUI → yak 引擎 → 目标服务的完整链路真实跑通**。
-
-![Yakit Web Fuzzer 真实发包并收到 200 响应](docs/images/06-webfuzzer-live-test.png)
-
-> ✅ **结论**：在仅放行 GitHub 的受限环境中，通过"手动下载引擎 + 本地连接"的离线方式，Yakit 的**引擎连接、项目管理、MITM 配置、Web Fuzzer 真实发包**等核心功能均成功运行；仅"在线插件商店/在线装引擎"因下载源被墙而不可用（这属于网络策略限制，非 Yakit 本身问题）。
+> ✅ **结论**：在仅放行 GitHub 的受限环境中，通过"手动下载引擎 + 本地连接"的离线方式，Yakit 的**引擎连接、项目管理、MITM 全流程、Web Fuzzer 发包与模糊测试、本地插件、Yak Runner 编程**等核心功能均**真实跑通**；只有"在线插件商店 / 在线装引擎 / 内置 DNSLog 域名生成"因下载源被网络策略拦截而不可用——这属于环境限制，**并非 Yakit 本身的问题**。
 
 ---
 
