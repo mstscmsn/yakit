@@ -1,0 +1,4 @@
+.run/
+squashfs-root/
+*.AppImage
+yak_engine
