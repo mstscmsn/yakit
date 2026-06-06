@@ -1,0 +1,20 @@
+// 03 控制流：if / for / switch
+// 注意：Yaklang 的 for...in 不支持 1..5 / range()，数字循环请用 C 风格
+for i = 1; i <= 5; i++ {
+    if i % 2 == 0 {
+        printf("%d 是偶数\n", i)
+    } else {
+        printf("%d 是奇数\n", i)
+    }
+}
+
+// switch 分支
+code = 404
+switch code {
+case 200:
+    println("请求成功")
+case 404:
+    println("页面不存在")
+default:
+    println("其他状态码")
+}

@@ -1,0 +1,9 @@
+// 09 端口扫描 + 服务指纹识别：servicescan 库
+// 扫描本机 9999 端口并自动识别服务/组件指纹
+res, err = servicescan.Scan("127.0.0.1", "9999")
+if err != nil { die(err) }
+for result in res {
+    // result.String() 直接给出 “地址 + 状态 + 指纹” 的完整信息
+    println("扫描结果:", result.String())
+    println("  目标:", result.Target, " 端口:", result.Port, " 状态:", result.State)
+}

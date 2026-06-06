@@ -1,0 +1,26 @@
+// 06 错误处理 与 并发
+// 1) Go 风格错误处理：函数返回 err，用 if 判断
+rsp, req, err = poc.Get("http://127.0.0.1:9999/")
+if err != nil {
+    die(err)            // die 直接终止并打印错误
+}
+println("请求状态码:", rsp.GetStatusCode())
+
+// 2) try / catch 捕获运行时异常
+try {
+    x = 10 / 0
+} catch e {
+    println("已捕获异常:", e)
+}
+
+// 3) 并发：go 关键字 + WaitGroup
+wg = sync.NewWaitGroup()
+for i = 0; i < 3; i++ {
+    wg.Add(1)
+    go func(n) {
+        defer wg.Done()
+        printf("  并发任务 #%d 执行完毕\n", n)
+    }(i)
+}
+wg.Wait()
+println("全部并发任务结束")

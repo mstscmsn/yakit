@@ -1,0 +1,13 @@
+// 05 常用库：字符串处理 str 与 编码 codec
+raw = "  Hello, Yakit Security  "
+println("原始:", sprintf("[%s]", raw))
+println("去空格:", sprintf("[%s]", str.TrimSpace(raw)))
+println("大写:", str.ToUpper(str.TrimSpace(raw)))
+println("包含 Yakit ?", str.Contains(raw, "Yakit"))
+println("分割:", str.Split("a,b,c,d", ","))
+
+// 编码 / 解码 / 哈希
+data = "admin:123456"
+println("Base64:", codec.EncodeBase64(data))
+println("MD5   :", codec.Md5(data))
+println("URL   :", codec.EncodeUrl(data))

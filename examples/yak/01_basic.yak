@@ -1,0 +1,14 @@
+// 01 基础语法：变量、类型、格式化输出
+// 运行: yak 01_basic.yak    （或在 Yakit 的 Yak Runner 中点“执行”）
+name = "Yakit"          // 字符串，自动推断类型
+version = 1.4           // 浮点数
+count = 37              // 整数
+enabled = true          // 布尔值
+
+printf("欢迎使用 %s，版本 %.1f\n", name, version)
+println("内置插件数量:", count)
+println("是否启用:", enabled)
+
+// 类型查看
+println("name 的类型是:", typeof(name))
+println("count 的类型是:", typeof(count))
