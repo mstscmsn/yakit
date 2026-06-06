@@ -1,0 +1,12 @@
+// 11 与 Yakit GUI 联动：yakit 库
+// 在 Yak Runner 中运行时，这些输出会显示在下方的“输出”面板
+yakit.Info("开始执行任务……")
+yakit.Info("目标: %s", "127.0.0.1:9999")
+
+rsp, _, err = poc.Get("http://127.0.0.1:9999/")
+if err != nil {
+    yakit.Error("请求失败: %v", err)
+} else {
+    yakit.Info("请求成功，状态码 %d", rsp.GetStatusCode())
+}
+yakit.Warn("任务结束（这是一条告警示例）")

@@ -1,0 +1,21 @@
+// 07 发 HTTP 包：poc 库（渗透测试最常用）
+// poc.Get / poc.Post / poc.HTTP 都可以发包
+rsp, req, err = poc.Get("http://127.0.0.1:9999/",
+    poc.timeout(5),
+    poc.https(false),
+)
+if err != nil { die(err) }
+
+println("状态码 :", rsp.GetStatusCode())
+println("Server :", rsp.GetHeader("Server"))
+println("响应体长度:", len(rsp.GetBody()))
+
+// 也可以直接发送原始报文
+raw = `GET /admin HTTP/1.1
+Host: 127.0.0.1:9999
+User-Agent: yak-poc
+
+`
+rsp2, _, _ = poc.HTTP(raw)
+println("原始报文请求 /admin -> 响应前 60 字节:")
+println(string(rsp2)[:60])

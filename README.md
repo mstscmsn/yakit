@@ -15,7 +15,20 @@
 7. [实战二：Web Fuzzer 与 Fuzztag](#7-实战二web-fuzzer-与-fuzztag)
 8. [实战三：插件商店与插件使用](#8-实战三插件商店与插件使用)
 9. [实战四：专项漏洞扫描](#9-实战四专项漏洞扫描)
-10. [实战五：Yak Runner 写脚本](#10-实战五yak-runner-写脚本)
+10. [实战五：Yak Runner 与 Yaklang 语法详解（含逐例截图）](#10-实战五yak-runner-与-yaklang-语法详解含逐例截图)
+    - [10.0 打开 Yak Runner](#100-打开-yak-runner)
+    - [10.1 变量、类型与格式化输出](#101-变量类型与格式化输出)
+    - [10.2 数组（切片）与字典（map）](#102-数组切片与字典map)
+    - [10.3 控制流：if / for / switch](#103-控制流if--for--switch)
+    - [10.4 函数、多返回值与闭包](#104-函数多返回值与闭包)
+    - [10.5 字符串处理与编码哈希（str / codec）](#105-字符串处理与编码哈希str--codec)
+    - [10.6 错误处理与并发（try-catch / go / WaitGroup）](#106-错误处理与并发try-catch--go--waitgroup)
+    - [10.7 发 HTTP 包：poc 库](#107-发-http-包poc-库)
+    - [10.8 模糊测试：fuzz 库与 fuzztag](#108-模糊测试fuzz-库与-fuzztag)
+    - [10.9 端口扫描与指纹识别：servicescan 库](#109-端口扫描与指纹识别servicescan-库)
+    - [10.10 基础爬虫：crawler 库](#1010-基础爬虫crawler-库)
+    - [10.11 与 GUI 联动：yakit 库](#1011-与-gui-联动yakit-库)
+    - [10.12 Yaklang 语法速查表](#1012-yaklang-语法速查表)
 11. [反连服务器（Reverse Server）](#11-反连服务器reverse-server)
 12. [常见问题 FAQ](#12-常见问题-faq)
 13. [测试截图：在本环境运行 Yakit](#13-测试截图在本环境运行-yakit)
@@ -252,30 +265,335 @@ Yakit 的「专项漏洞检测」针对常见目标做精准 PoC 扫描：
 
 ---
 
-## 10. 实战五：Yak Runner 写脚本
+## 10. 实战五：Yak Runner 与 Yaklang 语法详解（含逐例截图）
 
-Yak Runner 是内置的 Yaklang 代码编辑/运行环境，适合做自动化与自定义工具。Yaklang 语法类似 Go + Python，内置大量安全相关的标准库。
+**Yaklang（简称 Yak）** 是 Yakit 内置的、专为网络安全设计的编程语言（CDSL）。语法**像 Go + Python**：写法简洁、强类型但能自动推断，并且内置了海量安全相关标准库（`poc`、`fuzz`、`servicescan`、`crawler`、`codec`、`str` …）。
 
-一个最小示例（发起一次 HTTP 请求并打印响应）：
+**Yak Runner** 就是 Yakit 里的「在线 IDE」：写代码、语法检查、一键运行、看输出，全部在 GUI 里完成。
+
+> 📌 本章每个例子都**真实运行过**，下方截图均为 Yak Runner 的实际执行结果（代码区 + 底部「输出」面板）。所有脚本也已放在仓库 **[`examples/yak/`](examples/yak/)** 目录里，可直接下载运行。你也可以用引擎命令行运行同样的脚本（等价）：
+> ```bash
+> ./yak 你的脚本.yak        # 注意：是 yak <文件>，不是 yak run <文件>
+> ```
+> 其中 `06`~`11` 的网络示例默认请求 `http://127.0.0.1:9999`，运行前可先起个靶子：`python3 -m http.server 9999`。
+
+---
+
+### 10.0 打开 Yak Runner
+
+顶部菜单点击 **「Yak Runner」**，进入欢迎页，再点 **「新建文件」** 即可得到一个 `.yak` 代码编辑器；右上角橙色 **「执行」** 按钮用来运行，底部状态栏有 **语法检查 / 终端 / 输出** 面板。
+
+![Yak Runner 欢迎页](docs/images/yak/00-yakrunner-welcome.png)
+
+![Yak Runner 新建文件后的编辑器](docs/images/yak/00b-yakrunner-editor.png)
+
+---
+
+### 10.1 变量、类型与格式化输出
+
+变量无需声明类型，直接赋值即可（自动推断）。`println` 直接打印，`printf` 支持 `%s/%d/%v/%.1f` 等占位符；`typeof(x)` 查看类型。
 
 ```go
-// hello.yak
-rsp, req, err = poc.Get("https://example.com")
-if err != nil {
-    die(err)
+name = "Yakit"          // 字符串
+version = 1.4           // 浮点数
+count = 37              // 整数
+enabled = true          // 布尔值
+
+printf("欢迎使用 %s，版本 %.1f\n", name, version)
+println("内置插件数量:", count)
+println("name 的类型是:", typeof(name))   // string
+println("count 的类型是:", typeof(count)) // int
+```
+
+运行结果（输出面板）：
+
+![10.1 变量与类型运行结果](docs/images/yak/01-basic.png)
+
+---
+
+### 10.2 数组（切片）与字典（map）
+
+切片用 `[]` 定义，`append()` 追加，`len()` 取长度；map 用 `{}` 定义。
+
+> ⚠️ **遍历的坑（重点）**：Yaklang 中 `for e in 切片` 拿到的是**元素本身**；对切片用 `for i, e in 切片` 的双变量写法**不会**给你“下标+值”。要带下标请用 C 风格 `for i=0; i<len(s); i++`。而对 **map** 用 `for k, v in m` 才是正常的“键, 值”。
+
+```go
+ports = [80, 443, 8080, 3306]
+ports = append(ports, 6379)        // 追加
+println("长度:", len(ports))
+for port in ports {                // 单变量 = 元素
+    printf("  端口 %v\n", port)
 }
-println(string(rsp.RawPacket))
+
+service = {"80": "http", "443": "https", "3306": "mysql"}
+println("443 对应:", service["443"])
+for port, name in service {        // map：键, 值
+    printf("  %v => %v\n", port, name)
+}
 ```
 
-也可以用引擎命令行直接跑脚本（无需 GUI）：
+运行结果：
 
-```bash
-./yak run hello.yak
-# 或进入交互式解释器
-./yak
+![10.2 切片与 map 运行结果](docs/images/yak/02-collection.png)
+
+---
+
+### 10.3 控制流：if / for / switch
+
+> ⚠️ Yaklang 的 `for ... in` **不支持** `1..5` 或 `range(n)` 这种写法，数字循环请用 **C 风格** `for i=1; i<=5; i++`。
+
+```go
+for i = 1; i <= 5; i++ {
+    if i % 2 == 0 {
+        printf("%d 是偶数\n", i)
+    } else {
+        printf("%d 是奇数\n", i)
+    }
+}
+
+code = 404
+switch code {
+case 200: println("请求成功")
+case 404: println("页面不存在")
+default:  println("其他状态码")
+}
 ```
 
-更多标准库（`poc`、`http`、`fuzz`、`servicescan`、`crawler` 等）见官方文档。
+运行结果：
+
+![10.3 控制流运行结果](docs/images/yak/03-control.png)
+
+---
+
+### 10.4 函数、多返回值与闭包
+
+用 `func` 定义函数，支持**多返回值**和**匿名函数（闭包）**。
+
+```go
+func add(a, b) { return a + b }
+
+func divmod(a, b) {             // 多返回值
+    return a / b, a % b
+}
+q, r = divmod(17, 5)           // 一次接收多个返回值
+printf("17 / 5 = %d 余 %d\n", q, r)
+
+square = func(x) { return x * x }   // 匿名函数赋给变量
+println("square(9) =", square(9))
+```
+
+运行结果：
+
+![10.4 函数与闭包运行结果](docs/images/yak/04-func.png)
+
+---
+
+### 10.5 字符串处理与编码哈希（str / codec）
+
+`str.*` 提供字符串处理，`codec.*` 提供编码/解码/哈希——这两个库在渗透中极其常用。
+
+```go
+raw = "  Hello, Yakit Security  "
+println("去空格:", str.TrimSpace(raw))
+println("大写:",   str.ToUpper(str.TrimSpace(raw)))
+println("包含?",   str.Contains(raw, "Yakit"))
+println("分割:",   str.Split("a,b,c,d", ","))
+
+data = "admin:123456"
+println("Base64:", codec.EncodeBase64(data))
+println("MD5   :", codec.Md5(data))
+println("URL   :", codec.EncodeUrl(data))
+```
+
+运行结果（可见 Base64/MD5/URL 编码结果）：
+
+![10.5 字符串与编码运行结果](docs/images/yak/05-str-codec.png)
+
+---
+
+### 10.6 错误处理与并发（try-catch / go / WaitGroup）
+
+Yaklang 既支持 Go 风格的 `err` 返回值判断，也支持 `try { } catch e { }`；并发用 `go` 关键字 + `sync.NewWaitGroup()`。
+
+```go
+rsp, req, err = poc.Get("http://127.0.0.1:9999/")
+if err != nil { die(err) }              // die 直接终止并打印错误
+println("状态码:", rsp.GetStatusCode())
+
+try {
+    x = 10 / 0
+} catch e {
+    println("已捕获异常:", e)            // runtime error: integer divide by zero
+}
+
+wg = sync.NewWaitGroup()
+for i = 0; i < 3; i++ {
+    wg.Add(1)
+    go func(n) {
+        defer wg.Done()
+        printf("  并发任务 #%d 执行完毕\n", n)
+    }(i)
+}
+wg.Wait()
+println("全部并发任务结束")
+```
+
+运行结果：
+
+![10.6 错误处理与并发运行结果](docs/images/yak/06-error-concurrency.png)
+
+---
+
+### 10.7 发 HTTP 包：poc 库
+
+`poc` 是渗透测试**最常用**的发包库。`poc.Get / poc.Post` 用 URL 发包，`poc.HTTP` 直接发送**原始报文**（适合改包/构造畸形包）。
+
+```go
+// 用 URL 发 GET，并带上选项
+rsp, req, err = poc.Get("http://127.0.0.1:9999/",
+    poc.timeout(5),
+    poc.https(false),
+)
+if err != nil { die(err) }
+println("状态码 :", rsp.GetStatusCode())
+println("Server :", rsp.GetHeader("Server"))
+println("响应体长度:", len(rsp.GetBody()))
+
+// 直接发送原始 HTTP 报文
+raw = `GET /admin HTTP/1.1
+Host: 127.0.0.1:9999
+User-Agent: yak-poc
+
+`
+rsp2, _, _ = poc.HTTP(raw)
+println(string(rsp2)[:60])    // 打印响应前 60 字节
+```
+
+运行结果（真实拿到 `200`、`Server` 头与响应长度）：
+
+![10.7 poc 发包运行结果](docs/images/yak/07-http-poc.png)
+
+---
+
+### 10.8 模糊测试：fuzz 库与 fuzztag
+
+`fuzz` 库是 Web Fuzzer 的“代码版”。`fuzz.Strings("{{...}}")` 渲染 fuzztag；`fuzz.MustHTTPRequest(...).FuzzPath("/x{{int(1-3)}}").Exec()` 可对路径批量发包。
+
+```go
+// 1) fuzztag 渲染
+println("数字遍历:", fuzz.Strings("admin_{{int(1-3)}}"))   // [admin_1 admin_2 admin_3]
+println("列表遍历:", fuzz.Strings("{{list(GET|POST|PUT)}}"))// [GET POST PUT]
+
+// 2) 对真实请求的路径做 fuzz 并发包
+freq = fuzz.MustHTTPRequest("GET / HTTP/1.1\r\nHost: 127.0.0.1:9999\r\n\r\n")
+ch, err = freq.FuzzPath("/page{{int(1-3)}}").Exec()
+if err != nil { die(err) }
+n = 0
+for result in ch {
+    n++
+    code = poc.GetStatusCodeFromResponse(result.ResponseRaw)
+    printf("  第%d个请求 -> 状态码 %v, 响应 %d 字节\n", n, code, len(result.ResponseRaw))
+}
+printf("Fuzz 共发送 %d 个请求\n", n)
+```
+
+运行结果（fuzztag 展开 + 真实发出 3 个请求）：
+
+![10.8 fuzz 模糊测试运行结果](docs/images/yak/08-fuzz.png)
+
+---
+
+### 10.9 端口扫描与指纹识别：servicescan 库
+
+`servicescan.Scan(host, ports)` 在扫描端口的同时**识别服务/组件指纹**。
+
+```go
+res, err = servicescan.Scan("127.0.0.1", "9999")
+if err != nil { die(err) }
+for result in res {
+    println("扫描结果:", result.String())   // 含地址+状态+指纹
+    println("  目标:", result.Target, " 端口:", result.Port, " 状态:", result.State)
+}
+```
+
+运行结果（成功识别出 `http/python/simplehttp` 指纹）：
+
+![10.9 servicescan 端口扫描运行结果](docs/images/yak/09-servicescan.png)
+
+---
+
+### 10.10 基础爬虫：crawler 库
+
+`crawler.Start(url, crawler.maxDepth(n))` 启动爬虫，`for req in manager` 拿到每个发现的请求。
+
+```go
+manager, err = crawler.Start("http://127.0.0.1:9999/", crawler.maxDepth(2))
+if err != nil { die(err) }
+count = 0
+for req in manager {
+    count++
+    printf("[爬虫] %s %s\n", req.Request().Method, req.Url())
+}
+printf("共爬取到 %d 个 URL\n", count)
+```
+
+运行结果（自动发现 `/`、`/admin`、`/login`）：
+
+![10.10 crawler 爬虫运行结果](docs/images/yak/10-crawler.png)
+
+---
+
+### 10.11 与 GUI 联动：yakit 库
+
+`yakit.Info / yakit.Warn / yakit.Error` 会把日志按级别输出到 Yakit 的输出面板（写插件时用它向用户汇报进度）。
+
+```go
+yakit.Info("开始执行任务……")
+yakit.Info("目标: %s", "127.0.0.1:9999")
+
+rsp, _, err = poc.Get("http://127.0.0.1:9999/")
+if err != nil {
+    yakit.Error("请求失败: %v", err)
+} else {
+    yakit.Info("请求成功，状态码 %d", rsp.GetStatusCode())
+}
+yakit.Warn("任务结束（这是一条告警示例）")
+```
+
+运行结果（不同级别日志带颜色区分）：
+
+![10.11 yakit 库输出运行结果](docs/images/yak/11-yakit-output.png)
+
+---
+
+### 10.12 Yaklang 语法速查表
+
+| 主题 | 写法 | 说明 |
+| --- | --- | --- |
+| 变量 | `a = 1` | 无需声明类型，自动推断 |
+| 字符串 | `"双引号"` / `` `反引号(多行)` `` | 反引号支持多行原始字符串 |
+| 注释 | `// 单行`，`/* 多行 */` | 与 Go 一致 |
+| 切片 | `s = [1,2,3]`；`append(s, 4)` | `len(s)` 取长度 |
+| 字典 | `m = {"k": "v"}`；`m["k"]` | — |
+| 遍历切片 | `for e in s { }` | **单变量=元素** |
+| 带下标遍历 | `for i=0; i<len(s); i++ { s[i] }` | for-in 双变量对切片**不给**下标 |
+| 遍历 map | `for k, v in m { }` | 键, 值 |
+| 数字循环 | `for i=1; i<=5; i++ { }` | **不支持** `1..5` / `range()` |
+| 条件 | `if a>b { } else { }` | 条件不用加括号 |
+| 分支 | `switch x { case 1: ... default: ... }` | — |
+| 函数 | `func f(a,b){ return a+b }` | 支持多返回值 |
+| 匿名函数 | `g = func(x){ return x*x }` | 闭包 |
+| 错误处理 | `if err != nil { die(err) }` | 或 `try { } catch e { }` |
+| 并发 | `go func(){ }()` + `sync.NewWaitGroup()` | `wg.Add/Done/Wait` |
+| 发包 | `poc.Get(url)` / `poc.HTTP(raw)` | 返回 `rsp, req, err` |
+| 模糊测试 | `fuzz.Strings("{{int(1-3)}}")` | fuzztag 渲染/发包 |
+| 端口扫描 | `servicescan.Scan(host, ports)` | 带指纹识别 |
+| 爬虫 | `crawler.Start(url)` | — |
+| 编码 | `codec.EncodeBase64/Md5/EncodeUrl` | 编码与哈希 |
+| 字符串库 | `str.TrimSpace/ToUpper/Split/Contains` | — |
+| 日志输出 | `yakit.Info/Warn/Error(...)` | 输出到 GUI 面板 |
+
+> 更多标准库与函数可在 Yak Runner 中输入库名加 `.` 触发**自动补全**，或查阅[官方文档](https://yaklang.com/)。
 
 ---
 

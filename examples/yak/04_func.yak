@@ -1,0 +1,17 @@
+// 04 函数、多返回值、匿名函数
+// 普通函数
+func add(a, b) {
+    return a + b
+}
+println("add(3, 4) =", add(3, 4))
+
+// 多返回值
+func divmod(a, b) {
+    return a / b, a % b
+}
+q, r = divmod(17, 5)
+printf("17 / 5 = %d 余 %d\n", q, r)
+
+// 匿名函数 / 闭包
+square = func(x) { return x * x }
+println("square(9) =", square(9))

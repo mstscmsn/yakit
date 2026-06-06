@@ -1,0 +1,17 @@
+// 02 数据结构：数组(切片) 与 字典(map)
+ports = [80, 443, 8080, 3306]          // 切片
+println("端口列表:", ports, " 长度:", len(ports))
+ports = append(ports, 6379)            // 追加元素
+println("追加后:", ports)
+
+// 遍历切片：单变量拿到“元素”
+for port in ports {
+    printf("  端口 %v\n", port)
+}
+
+// 字典 map：key/value 遍历
+service = {"80": "http", "443": "https", "3306": "mysql"}
+println("443 对应服务:", service["443"])
+for port, name in service {
+    printf("  %v => %v\n", port, name)
+}

@@ -1,0 +1,9 @@
+// 10 基础爬虫：crawler 库，自动发现站点链接
+manager, err = crawler.Start("http://127.0.0.1:9999/", crawler.maxDepth(2))
+if err != nil { die(err) }
+count = 0
+for req in manager {
+    count++
+    printf("[爬虫] %s %s\n", req.Request().Method, req.Url())
+}
+printf("共爬取到 %d 个 URL\n", count)
